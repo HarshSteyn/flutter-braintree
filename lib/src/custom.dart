@@ -9,6 +9,21 @@ class Braintree {
 
   const Braintree._();
 
+  /// Fetches the drop in result
+  ///
+  /// [authorization] must be either a valid client token or a valid tokenization key.
+  ///
+  /// Returns a [Future] that resolves to a [BraintreePaymentMethodNonce] if the tokenization was successful.
+  static Future<BraintreePaymentMethodNonce?> fetchDropInResult(
+    String authorization,
+  ) async {
+    final result = await _kChannel.invokeMethod('fetchDropInResult', {
+      'authorization': authorization,
+    });
+    if (result == null) return null;
+    return BraintreePaymentMethodNonce.fromJson(result);
+  }
+
   /// Tokenizes a credit card.
   ///
   /// [authorization] must be either a valid client token or a valid tokenization key.

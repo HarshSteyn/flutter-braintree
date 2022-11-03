@@ -1,5 +1,6 @@
 package com.example.flutter_braintree;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
@@ -7,17 +8,28 @@ import android.os.Bundle;
 
 import com.braintreepayments.api.BraintreeFragment;
 import com.braintreepayments.api.Card;
+import com.braintreepayments.api.GooglePayment;
 import com.braintreepayments.api.PayPal;
+import com.braintreepayments.api.PaymentMethod;
+import com.braintreepayments.api.dropin.DropInResult;
+import com.braintreepayments.api.dropin.utils.PaymentMethodType;
 import com.braintreepayments.api.exceptions.InvalidArgumentException;
 import com.braintreepayments.api.interfaces.BraintreeCancelListener;
 import com.braintreepayments.api.interfaces.BraintreeErrorListener;
+import com.braintreepayments.api.interfaces.BraintreeListener;
+import com.braintreepayments.api.interfaces.BraintreeResponseListener;
 import com.braintreepayments.api.interfaces.PaymentMethodNonceCreatedListener;
+import com.braintreepayments.api.interfaces.PaymentMethodNoncesUpdatedListener;
+import com.braintreepayments.api.internal.BraintreeSharedPreferences;
+import com.braintreepayments.api.models.Authorization;
 import com.braintreepayments.api.models.CardBuilder;
+import com.braintreepayments.api.models.ClientToken;
 import com.braintreepayments.api.models.PayPalRequest;
 import com.braintreepayments.api.models.PaymentMethodNonce;
 import com.braintreepayments.api.models.PayPalAccountNonce;
 
 import java.util.HashMap;
+import java.util.List;
 
 public class FlutterBraintreeCustom extends AppCompatActivity implements PaymentMethodNonceCreatedListener, BraintreeCancelListener, BraintreeErrorListener {
     private BraintreeFragment braintreeFragment;
@@ -30,7 +42,11 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
             Intent intent = getIntent();
             braintreeFragment = BraintreeFragment.newInstance(this, intent.getStringExtra("authorization"));
             String type = intent.getStringExtra("type");
-            if (type.equals("tokenizeCreditCard")) {
+            if (type.equals("fetchDropInResult")) {
+                String clientToken = intent.getStringExtra("authorization");
+                fetchDropInResult(this, clientToken);
+            }
+            else if (type.equals("tokenizeCreditCard")) {
                 tokenizeCreditCard();
             } else if (type.equals("requestPaypalNonce")) {
                 requestPaypalNonce();
@@ -44,6 +60,67 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
             finish();
             return;
         }
+    }
+
+    protected void fetchDropInResult(AppCompatActivity activity, String clientToken) {
+        try {
+            if (!(Authorization.fromString(clientToken) instanceof ClientToken)) {
+                return;
+            }
+        } catch (InvalidArgumentException e) {
+            return;
+        }
+
+        final BraintreeFragment fragment;
+        try {
+            fragment = BraintreeFragment.newInstance(activity, clientToken);
+        } catch (InvalidArgumentException e) {
+            return;
+        }
+
+        final List<BraintreeListener> previousListeners = fragment.getListeners();
+
+        BraintreeErrorListener errorListener = new BraintreeErrorListener() {
+            @Override
+            public void onError(Exception error) {
+            }
+        };
+        PaymentMethodNoncesUpdatedListener paymentMethodsListener = new PaymentMethodNoncesUpdatedListener() {
+            @Override
+            public void onPaymentMethodNoncesUpdated(List<PaymentMethodNonce> paymentMethodNonces) {
+
+                if (paymentMethodNonces.size() > 0) {
+                    PaymentMethodNonce paymentMethod = paymentMethodNonces.get(0);
+
+                    HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+                    nonceMap.put("nonce", paymentMethod.getNonce());
+                    nonceMap.put("typeLabel", paymentMethod.getTypeLabel());
+                    nonceMap.put("description", paymentMethod.getDescription());
+                    nonceMap.put("isDefault", paymentMethod.isDefault());
+                    if (paymentMethod instanceof PayPalAccountNonce) {
+                        PayPalAccountNonce paypalAccountNonce = (PayPalAccountNonce) paymentMethod;
+                        nonceMap.put("paypalPayerId", paypalAccountNonce.getPayerId());
+                    }
+
+                    Intent result = new Intent();
+                    result.putExtra("type", "paymentMethodNonce");
+                    result.putExtra("paymentMethodNonce", nonceMap);
+                    setResult(RESULT_OK, result);
+                    finish();
+                } else {
+                    Intent result = new Intent();
+                    result.putExtra("type", "paymentMethodNonce");
+                    setResult(RESULT_OK, result);
+                    finish();
+                }
+            }
+        };
+
+        fragment.addListener(errorListener);
+        fragment.addListener(paymentMethodsListener);
+
+        PaymentMethod.getPaymentMethodNonces(fragment);
+
     }
 
     protected void tokenizeCreditCard() {

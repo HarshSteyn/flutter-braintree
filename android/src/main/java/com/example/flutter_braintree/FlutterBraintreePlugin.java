@@ -86,8 +86,14 @@ public class FlutterBraintreePlugin implements FlutterPlugin, ActivityAware, Met
       return;
     }
     activeResult = result;
-
-    if (call.method.equals("tokenizeCreditCard")) {
+    if (call.method.equals("fetchDropInResult")) {
+      String authorization = call.argument("authorization");
+      Intent intent = new Intent(activity, FlutterBraintreeCustom.class);
+      intent.putExtra("type", "fetchDropInResult");
+      intent.putExtra("authorization", (String) call.argument("authorization"));
+      activity.startActivityForResult(intent, CUSTOM_ACTIVITY_REQUEST_CODE);
+    }
+    else if (call.method.equals("tokenizeCreditCard")) {
       String authorization = call.argument("authorization");
       Intent intent = new Intent(activity, FlutterBraintreeCustom.class);
       intent.putExtra("type", "tokenizeCreditCard");
