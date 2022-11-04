@@ -31,8 +31,6 @@ func makePaymentSummaryItems(from: Dictionary<String, Any>) -> [PKPaymentSummary
 
 public class FlutterBraintreeDropInPlugin: BaseFlutterBraintreePlugin, FlutterPlugin, BTThreeDSecureRequestDelegate {
     
-
-    
     private var completionBlock: FlutterResult!
     private var applePayInfo = [String : Any]()
     private var authorization: String!

@@ -26,8 +26,15 @@ public class FlutterBraintreeCustomPlugin: BaseFlutterBraintreePlugin, FlutterPl
         }
         
         let client = BTAPIClient(authorization: authorization)
-        
-        if call.method == "requestPaypalNonce" {
+
+        if call.method == "fetchDropInResult" {
+            client?.fetchPaymentMethodNonces(true, completion: { (nonces, error) in
+                let nonce = nonces?.first
+                self.handleResult(nonce: nonce, error: error, flutterResult: result)
+                self.isHandlingResult = false
+            })
+        }
+        else if call.method == "requestPaypalNonce" {
             let driver = BTPayPalDriver(apiClient: client!)
             
             guard let requestInfo = dict(for: "request", in: call) else {
