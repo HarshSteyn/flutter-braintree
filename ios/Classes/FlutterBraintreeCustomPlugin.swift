@@ -29,7 +29,7 @@ public class FlutterBraintreeCustomPlugin: BaseFlutterBraintreePlugin, FlutterPl
 
         if call.method == "fetchDropInResult" {
             client?.fetchPaymentMethodNonces(true, completion: { (nonces, error) in
-                let nonce = nonces.first
+                let nonce = nonces?.first
                 self.handleResult(nonce: nonce, error: error, flutterResult: result)
                 self.isHandlingResult = false
             })
